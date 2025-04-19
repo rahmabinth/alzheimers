@@ -1,7 +1,6 @@
 #### Preamble ####
 # Purpose: Installs the necessary packages. 
 # Author: Rahma Binth Mohammad
-# Date: December 8, 2025
 # Contact: rahma.binthmohammad@mail.utoronto.ca
 # License: MIT
 
