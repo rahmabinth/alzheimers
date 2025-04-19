@@ -11,7 +11,6 @@ library(ggplot2)
 library(caret)
 library(e1071)
 
-
 # Read in the data
 train_data <- read.csv("data/01-raw_data/train.csv", stringsAsFactors = FALSE)
 
@@ -255,12 +254,6 @@ ggplot(summary_symptoms, aes(x = as.factor(HasSymptoms),
        y = "Number of People",
        fill = "Diagnosis (0 = No, 1 = Yes)") +
   theme_minimal()
-
-
-
-
-
-
 
 #Split the data with similar proportions of diagnosed and undiagnoses
 index_70 <- createDataPartition(train_data$Diagnosis, p = 0.7, list = FALSE)
