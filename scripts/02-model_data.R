@@ -40,11 +40,16 @@ train_data <- binary_to_factor(train_data)
 test_data <- binary_to_factor(test_data)
 
 # Select features to be used in SVM based on the trends found previously
-selected_features <- c("MMSE", "Ethnicity","MemoryComplaints", "ADL", 
-                       "FunctionalAssessment", "CholesterolTotal", "EducationLevel", 
-                       "BehavioralProblems", "Confusion", "Disorientation",
-                       "HeadInjury", "Forgetfulness", "DifficultyCompletingTasks",
-                       "PersonalityChanges")
+selected_features <- c("Ethnicity", 
+                       "EducationLevel", 
+                       "MMSE",
+                       "MemoryComplaints", 
+                       "ADL", 
+                       "FunctionalAssessment", 
+                       "CholesterolTotal", 
+                       "BehavioralProblems",
+                       "FamilyHistoryAlzheimers")
+                      # "Confusion", "Disorientation")
 
 # Create a subset to contain the selected features and the target variable for the training data
 train_selected <- train_data[, c(selected_features, "Diagnosis")]
@@ -57,11 +62,11 @@ set.seed(123)
 #SVM - fine tuned
 svm_model <- svm(Diagnosis ~ ., 
                  data = train_selected, 
-                 kernel = "radial",  # or "radial"
-                 cost = 10,  
-                 gamma = 0.1, # you can tune this
+                 kernel = "radial",  
+                 cost = 20,  
+                 gamma = 0.1, 
                  scale = TRUE,
-                 class.weights = c("0" = 1, "1" = 1.5))   # useful if your features are on different scales
+                 class.weights = c("0" = 1, "1" = 1.3))   # useful if your features are on different scales
 
 predictions_for_sub <- predict(svm_model, newdata = test_selected[, c(selected_features, "PatientID")])
 
