@@ -4,9 +4,10 @@ subtitle: "Kaggle Competition Report"
 author: 
   - Rahma Binth Mohammad
 thanks: "Code and data are available at: [https://github.com/rahmabinth/alzheimers](https://github.com/rahmabinth/alzheimers)."
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "This report is based on project that used supervised machine learning techniques to build a model that classifies those diagnosed with Alzheimers. After preprocessing and feature selection, we evaluated several algorithms and selected the best-performing model based on predictive accuracy. Our final model achieved a Kaggle score of _____, ranking ____ among the other models."
 format: pdf
 number-sections: true
+toc: true
 bibliography: references.bib
 ---
 
@@ -17,63 +18,165 @@ bibliography: references.bib
 
 library(tidyverse)
 library(palmerpenguins)
-```
+library(patchwork)
 
+# Read in the data
+setwd("/Users/Rahma/alzheimers")
+train_data <- read.csv("data/01-raw_data/train.csv", stringsAsFactors = FALSE)
+
+test_data <- read.csv("data/01-raw_data/test.csv", stringsAsFactors = FALSE)
+
+# Remove the 'DoctorInCharge' column, irrelevant to our problem
+train_data <- select(train_data, -DoctorInCharge)
+test_data <- select(test_data, -DoctorInCharge)
+```
 
 # Introduction
 
-Overview paragraph
+There were over 55 million people worldwide living with dementia in 2020 and by 2050, it is projected to affect 139 million people (cite Alzheimer's International). Due to the fact that this is a huge amount of the population, it is important to identify the characteristics and lifestyle choices of the people it affects in order to find a pattern or a prevention method. Finding a pattern can help with early detection, which would allow for better prevention. Thus, this paper focuses on predicting Alzheimer's Disease in patients using a dataset from Kaggle that contains data collected from patients. We treated the diagnosis as a binary outcome (1 = Yes, 0 = No) and aimed to use machined learning algorithms to find the best model for performance. 
 
-Estimand paragraph
+Our final and best performing model achieved a score of _____ and ranked ______ on the leaderboard. The model performed as follows. Evaluation metrics -----> Strongly in AUC or F1 score (find out). 
 
-Results paragraph
+Our model matters because it allows for early detection of Alzheimers and demonstrates the potential of machine learning in highlighting key predictive factors in patient data. 
 
-Why it matters paragraph
-
-Telegraphing paragraph: The remainder of this paper is structured as follows. @sec-data....
-
-
-
-
-
+The remainder of this paper is structured as follows. @sec-data....
 
 # Data {#sec-data}
 
-## Overview
+Kaggle Username: rahmabm
 
-We use the statistical programming language R [@citeR].... Our data [@shelter].... Following @tellingstories, we consider...
+Final Kaggle Ranking:
 
-Overview text
+Final Private Score: 
 
-## Measurement
-	
+## Overview {#sec-overview}
+
+We conducted our analysis using the statistical programming language R [@citeR]. Our data was pulled from the Kaggle Competition called Classification of the Alzheimer's Disease dataset [cite competition]. The dataset provides patient data for _____ patients. Each row contains a different individuals patient data with ___ different variables found at [cite]]. It contains demographic details, lifestyle factors, medical history, cognitive assessments, and symptoms for each patient. 
+
+## Measurement {#sec-measurement}
+
+While the dataset is based on real-world patient assessments and health records, certain variables are expressed as measurable features with the use of standardizes clinic tests. This includes several of the cognitive and function assessments in the reported data such as Mini-Mental State Examination Score, Functional Assessment Score, and Behavioural Problems. Others have been self-reported as binary variables, such as the symptoms. Variables such as Confusion, measured the presence of confusion, along with variables like Disorientation and Forgetfulness. 
+
 Some paragraphs about how we go from a phenomena in the world to an entry in the dataset.
 
-## Outcome variables
-
-Add graphs, tables and text. Use sub-sub-headings for each outcome variable or update the subheading to be singular.
-
-
-
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
 
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+#| label: fig-cog
+#| fig-cap: Diagnosis vs. Cognitive Issues
+#| fig-align: "center"
 #| echo: false
+library(dplyr)
+library(ggplot2)
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+## Add a column that indicates if the person has at least one cognitive issue
+train_data <- train_data %>% 
+  mutate(HasCognitiveIssues = ifelse(MMSE < 10 | 
+                                       FunctionalAssessment < 5 | 
+                                       MemoryComplaints == 1 | 
+                                       BehavioralProblems == 1 | 
+                                       ADL < 5, 1, 0))
+
+
+# Count the number of people in each group (HasCognitiveIssues vs Diagnosis)
+summary_cognitive <- train_data %>%
+  group_by(HasCognitiveIssues, Diagnosis) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Plot HasCognitiveIssues vs Diagnosis
+ggplot(summary_cognitive, aes(x = as.factor(HasCognitiveIssues), 
+                              y = Count, fill = as.factor(Diagnosis))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("0" = "None", "1" = "One or More")) +
+  scale_fill_manual(name = "Diagnosis",
+    values = c("0" = "deepskyblue4", "1" = "darkred"),
+    labels = c("No", "Yes")) +
+  labs(x = "Cognitive Issues",
+       y = "Number of People") +
+  theme(axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10)) +
+  theme(legend.position = "right")   
+
 ```
 
-Talk more about it.
+## Data Preprocessing and Feature Engineering {#sec-preprocessing}
 
-And also planes. (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
+We started by inspecting the data for missing values and irrelevant variables. We found variables such as the “DoctorInCharge”, and “PatientID” to be irrelevant to our problem and removed them. This also allowed for randomness in our data. We looked for patterns within the data but segregating the data into separate categories. We identified those with anytime type of cognitive issues and looked for a pattern within those diagnosed and undiagnosed with Alzeheimers. These issues were found through cognitive and functional assessments as mentioned earlier. They include ______. We found that 88% of the patients had one or more cognitive issue and approximately 40% of them were diagnosed with the diseases. The most vital/significant find was that only 1% of those undiagnosed with the disease had one or more cognitive issues and approximately 40% of those with cognitive issues were diagnosed with the disease. This indicated a very high chance/correlation that if a patient had a cognitive issue, they were more likely to have the disease. 
+
+```{r}
+#| label: fig-medsym
+#| fig-cap: Diagnosis vs. Medical History and Diagnosis vs. Symptoms
+#| fig-align: "center"
+#| echo: false
+
+library(dplyr)
+library(ggplot2)
+
+## Add a column that indicates if the person has at least one medical condition 
+train_data <- train_data %>% 
+  mutate(HasMedicalCondition = ifelse(FamilyHistoryAlzheimers == 1 | 
+                                        CardiovascularDisease == 1 | 
+                                        Diabetes == 1 | 
+                                        Depression == 1 | 
+                                        HeadInjury == 1 | 
+                                        Hypertension == 1, 1, 0))
+
+# Count the number of people in each group (HasMedicalCondition vs Diagnosis)
+summary_med <- train_data %>%
+  group_by(HasMedicalCondition, Diagnosis) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Plot HasMedicalCondition vs Diagnosis
+plot_med <- ggplot(summary_med, aes(x = as.factor(HasMedicalCondition), 
+                         y = Count, fill = as.factor(Diagnosis))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("0" = "None", "1" = "One or More")) +
+  scale_fill_manual(name = "Diagnosis",
+                    values = c("0" = "deepskyblue4", "1" = "darkred"),
+                    labels = c("No", "Yes")) +
+  labs(x = "Medical Conditions",
+       y = "Number of People") +
+  theme(axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10)) +
+  theme(legend.position = "top")   
+
+# Add a column that indicates if the person has at least one symptom
+train_data <- train_data %>% 
+  mutate(HasSymptoms = ifelse(Confusion == 1 | 
+                                Disorientation == 1 | 
+                                PersonalityChanges == 1 | 
+                                DifficultyCompletingTasks == 1 | 
+                                Forgetfulness == 1, 1, 0))
+
+# Count the number of people in each group (HasSymptoms vs Diagnosis)
+summary_symptoms <- train_data %>%
+  group_by(HasSymptoms, Diagnosis) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Plot HasSymptoms vs Diagnosis
+plot_sym <- ggplot(summary_symptoms, aes(x = as.factor(HasSymptoms), 
+                             y = Count, fill = as.factor(Diagnosis))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("0" = "None", "1" = "One or More")) +
+  scale_fill_manual(name = "Diagnosis",
+                    values = c("0" = "deepskyblue4", "1" = "darkred"),
+                    labels = c("No", "Yes")) +
+  labs(x = "Symptoms",
+       y = "Number of People") +
+  theme(axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10)) +
+  theme(legend.position = "top")   
+
+plot_med_sym <- plot_med + plot_sym +
+  plot_layout(ncol = 2) 
+
+print(plot_med_sym)
+```
+
+We did the same with medical history. If the patient had one or more of the the following, we grouped them, a family history of the disease, cardiovascular disease, diabetes, depression, history of head injury, hypertension. We found approximately 66% of the patients had one or more medical condition and 35% of them were diagnosed. It was also shown that 35% of those diagnosed didn’t have one or more of these medical condition. It was less conclusive then those with cognitive issues but we found it relevant to test out models with this feature later on, since a significant number of those with the condition were diagnosed. We saw a similar pattern with patient symptoms, where we grouped together those with one or more of the symptoms, “Confusion”, “Disorientation, “PersonalityChanges”, “DifficultCompletingTasks”, and “Forgetful”. See @fig-medsym.
+
+## Feature Selection {#sec-select}
+
+In addition, we looked at how each variable/factor played into the diagnosis. @Sec-appendix.2 provides the code to replicate this by changing the name for the variable. Our analysis revealed that certain features had the most impact. For example, by examining all the variables, we saw 61% of those diagnosed were Caucasians, and 61% of those diagnosed either didn’t attend high school or only attended high school and didn’t hold a Bachelor’s Degree or Higher Education. However, gender didn’t seem to play a role as the number of men and women diagnosed were approximately the same. 
 
 ```{r}
 #| label: fig-planes
@@ -87,41 +190,30 @@ And also planes. (You can change the height and width, but don't worry about doi
 
 ```
 
-Talk way more about it. 
-
-## Predictor variables
-
-Add graphs, tables and text.
-
-Use sub-sub-headings for each outcome variable and feel free to combine a few into one if they go together naturally.
-
-
-
-
-
-
-
-
 # Model
-
-The goal of our modelling strategy is twofold. Firstly,...
-
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
+Our initial goal for our modelling strategy was twofold, balancing interpretability and predictive accuracy. With this in mind, we used the three factors mentioned in @sec-preprocessing, cognitive issues, medical conditions, and symptoms, we tried to create a logistic regression model and used cross validation method to train and test data but failed to get higher than 62% predictability rate. Hence, we prioritized predictive performance by choosing to do a Support Vector Machine model, which offered limited interpretability. The SVM performed significantly better than our previous tested models. However, interpretability decreased. @sec-discussion identifies this tradeoff.  
 
 ## Model set-up
 
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
+We define the outcome variable $y_i \in \{0, 1\}$ as the diagnosis of Alzheimer's Disease, where $y_i = 1$ indicates a positive diagnosis and $y_i = 0$ indicates a negative diagnosis. To predict this outcome, we trained a Support Vector Machine (SVM) classifier using the following selected predictor variables whether the feature for individual $i$ is denoted by $x_i = (x_1, x_2,...,x_p)$.
 
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
+$x_1$: Ethnicity, $x_2$: Gender, $x_3$: MMSE score (Mini-Mental State Examination score), $x_4$: MemoryComplaints, $x_5$: ADL, $x_6$: FunctionalAssessment, $x_7$: BehavioralProblems, $x_8$: HeadInjury, $x_9$: Forgetfulness
 
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
+The model estimates a function $f(\mathbf{x}_i)$ such that:
+
+$$
+\hat{y}_i = \begin{cases}
+1 & \text{if } f(\mathbf{x}_i) \geq 0 \\
+0 & \text{if } f(\mathbf{x}_i) < 0
+\end{cases}
+$$
+
+
+We run the model in R [@citeR] using the `e1071` package [@e1071]. In our SVM model, $f(\mathbf{x})$ is the decision function — a number that tells how far a point is from the decision boundary (i.e., the separating surface between classes).
+
+If $f(\mathbf{x}_i) \geq 0$, the model predicts class 1 (positive diagnosis).  
+If $f(\mathbf{x}_i) < 0$, it predicts class 0 (negative diagnosis).
+
 
 
 ### Model justification
@@ -143,8 +235,8 @@ Our results are summarized in @tbl-modelresults.
 
 library(rstanarm)
 
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
+svm_model <-
+  readRDS(file = here::here("models/svm_model.rds"))
 ```
 
 ```{r}
@@ -154,13 +246,7 @@ first_model <-
 #| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
 #| warning: false
 
-modelsummary::modelsummary(
-  list(
-    "First model" = first_model
-  ),
-  statistic = "mad",
-  fmt = 2
-)
+
 ```
 
 
@@ -195,9 +281,9 @@ Weaknesses and next steps should also be included.
 
 ## Posterior predictive check
 
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
+In we implement a posterior predictive check. This shows...
 
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+In we compare the posterior with the prior. This shows... 
 
 ```{r}
 #| eval: true
@@ -236,9 +322,9 @@ In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. Th
 #| fig-subcap: ["Trace plot", "Rhat plot"]
 #| layout-ncol: 2
 
-plot(first_model, "trace")
+#plot(first_model, "trace")
 
-plot(first_model, "rhat")
+#plot(first_model, "rhat")
 ```
 
 
