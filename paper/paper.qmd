@@ -178,18 +178,6 @@ We did the same with medical history. If the patient had one or more of the the 
 
 In addition, we looked at how each variable/factor played into the diagnosis. @Sec-appendix.2 provides the code to replicate this by changing the name for the variable. Our analysis revealed that certain features had the most impact. For example, by examining all the variables, we saw 61% of those diagnosed were Caucasians, and 61% of those diagnosed either didn’t attend high school or only attended high school and didn’t hold a Bachelor’s Degree or Higher Education. However, gender didn’t seem to play a role as the number of men and women diagnosed were approximately the same. 
 
-```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
-#| echo: false
-#| warning: false
-#| message: false
-
-#analysis_data <- read_csv(here::here("data/02-analysis_data/analysis_data.csv"))
-
-
-```
-
 # Model
 Our initial goal for our modelling strategy was twofold, balancing interpretability and predictive accuracy. With this in mind, we used the three factors mentioned in @sec-preprocessing, cognitive issues, medical conditions, and symptoms, we tried to create a logistic regression model and used cross validation method to train and test data but failed to get higher than 62% predictability rate. Hence, we prioritized predictive performance by choosing to do a Support Vector Machine model, which offered limited interpretability. The SVM performed significantly better than our previous tested models. However, interpretability decreased. @sec-discussion identifies this tradeoff.  
 
@@ -218,38 +206,92 @@ If $f(\mathbf{x}_i) < 0$, it predicts class 0 (negative diagnosis).
 
 ### Model justification
 
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
 
-We can use maths by including latex between dollar signs, for instance $\theta$.
+## Evaluation Metrics and Model Performance {#sec-eval}
+
+Before submitting on Kaggle, we worked with the “train_csv” file and split it into two, 70% of the data was used for training and 30% used for validation. Our validation set proved useful when testing the models. Hyperparameter tuning via 10-fold cross validation helped identify the optimal parameters, cost = 10 and gamma = 0.1. These parameters provided a cross-validated error rate of 0.0997, which shows that the model misclassifies about 10.26% of observations and will do so on new and similar data. 
+
+Our Support Vector Machine (SVM) classifier with these parameters achieved an accuracy of 89% and sensitivity of 90.1% (accurately identifying the undiagnosed patients) and specificity of 87% (accurately identifying the diagnosed patients) on the validation set. The ROC curve in @fig-roc shows this relationship and plots how well our model separates the two classes. The area under the curve (AUC) of 0.941 shows that our model has excellent ability to distinguish between Alzheimer's-positive and Alzheimer's-negative patients.
+
+Note we chose a radial kernel rather than a linear one as it provided about 9% less accuracy.
+
+
+```{r}
+#| label: fig-roc
+#| fig-cap: ROC curve
+#| echo: false
+#| warning: false
+#| message: false
+
+library(e1071)
+library(caret)
+library(pROC)
+setwd("/Users/Rahma/alzheimers")
+set.seed(123)
+#Split the data with similar proportions of diagnosed and undiagnoses
+index_70 <- createDataPartition(train_data$Diagnosis, p = 0.7, list = FALSE)
+train_70 <- train_data[index_70,]
+validation_set <- train_data[-index_70,]
+
+train_70$Diagnosis <- as.factor(train_70$Diagnosis)
+
+# Convert 0/1 columns to factors
+binary_to_factor <- function(df) {
+  binary_cols <- sapply(df, function(col) all(col %in% c(0, 1)))
+  df[binary_cols] <- lapply(df[binary_cols], factor)
+  return(df)
+}
+
+train_70 <- binary_to_factor(train_70)
+validation_set <- binary_to_factor(validation_set)
+
+# Remove the 'PAtientID' column, irrelevant to our problem
+train_70 <- select(train_70, -PatientID)
+validation_set <- select(validation_set, -PatientID)
+
+# Select features to be used in SVM based on the trends found previously
+selected_features_70 <- c("Ethnicity", 
+                       "Gender",
+                       "MMSE",
+                       "MemoryComplaints", 
+                       "ADL", 
+                       "FunctionalAssessment", 
+                       "BehavioralProblems",
+                       "HeadInjury", 
+                       "Forgetfulness")
+
+# Subset to selected features + target
+train_subset <- train_70[, c(selected_features_70, "Diagnosis")]
+test_subset <- validation_set[, c(selected_features_70, "Diagnosis")]
+
+set.seed(123)
+svm_model_test <- svm(Diagnosis ~ ., 
+                 data = train_subset, 
+                 kernel = "radial",  # or "radial"
+                 cost = 10,  
+                 gamma = 0.1, # you can tune this
+                 scale = TRUE,
+                 class.weights = c("0" = 1, "1" = 1.3))       
+
+predictions <- predict(svm_model_test, newdata = test_subset[, selected_features_70])
+
+# Get decision values (probabilities or distance from hyperplane)
+svm_model_prob <- predict(svm_model_test, newdata = test_subset[, selected_features_70], decision.values = TRUE)
+
+# Extract decision values (needed for ROC)
+decision_values <- attributes(svm_model_prob)$decision.values
+
+# Create ROC curve
+roc_obj <- roc(test_subset$Diagnosis, as.numeric(decision_values))
+
+#Plot ROC curve with value
+plot(roc_obj, col = "darkred", main = paste("AUC:", round(auc(roc_obj), 3)))
+```
 
 
 # Results
 
-Our results are summarized in @tbl-modelresults.
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-library(rstanarm)
-
-svm_model <-
-  readRDS(file = here::here("models/svm_model.rds"))
-```
-
-```{r}
-#| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
-
-
-```
-
-
+As mentioned in @sec-select, all the variables were examined to see a ___. However, when we simply inputted those features into the SVM, it only gave us an accuracy of 86%. To improve our model and better understand each feature’s importance, we conducted a leave-one-feature-out sensitivity check, essentially removing one feature at a time, retraining the model, and checking how the accuracy changes. Using this, we found certain features to be extremely important to the model’s predictive ability. For example, MMSE and FunctionalAssessment were very important. This check also allowed us identify which features to retain and exclude. The final set of features used is listen in @sec-model-set and reflects the most significant contributors to the Alzheimer’s disease. @sec-discussion will examine the relevance of these features. 
 
 
 # Discussion
