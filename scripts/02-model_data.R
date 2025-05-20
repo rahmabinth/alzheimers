@@ -41,15 +41,17 @@ test_data <- binary_to_factor(test_data)
 
 # Select features to be used in SVM based on the trends found previously
 selected_features <- c("Ethnicity", 
-                       "EducationLevel", 
+                       "EducationLevel",
                        "MMSE",
                        "MemoryComplaints", 
                        "ADL", 
                        "FunctionalAssessment", 
                        "CholesterolTotal", 
                        "BehavioralProblems",
-                       "FamilyHistoryAlzheimers")
-                      # "Confusion", "Disorientation")
+                       "FamilyHistoryAlzheimers",
+                       "Confusion", "Disorientation",
+                       "HeadInjury", "Forgetfulness", "DifficultyCompletingTasks",
+                       "PersonalityChanges")
 
 # Create a subset to contain the selected features and the target variable for the training data
 train_selected <- train_data[, c(selected_features, "Diagnosis")]
